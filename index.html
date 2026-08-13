@@ -22,6 +22,10 @@
         <path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/>
       </svg>
       <input id="search-input" type="search" placeholder="Search stations, e.g. Radio Mirchi" autocomplete="off" aria-label="Search stations">
+      <div id="account-chip" class="account" hidden>
+        <span id="user-label" class="user-label"></span>
+        <button id="signout-btn" class="signout-btn" type="button" title="Sign out">Sign out</button>
+      </div>
       <button id="favorites-toggle" class="fav-toggle" title="Show my favorites" aria-pressed="false">
         <span class="heart">&#9829;</span> Favorites
         <span id="fav-count" class="fav-count" hidden>0</span>
@@ -88,6 +92,7 @@
   <footer class="footer">
     <p>RadioVerse &middot; streams powered by the <a href="https://www.radio-browser.info" target="_blank" rel="noopener">Radio Browser</a> community directory</p>
     <p class="footer-note">All streams are owned by their respective broadcasters.</p>
+    <p class="footer-copy">&copy; 2026 anurag171. All rights reserved.</p>
   </footer>
 
   <div id="player-bar" class="player-bar" hidden>
@@ -123,6 +128,30 @@
   </div>
 
   <audio id="audio" preload="none"></audio>
+
+  <div id="login-screen" class="login-screen" hidden>
+    <div class="login-card">
+      <div class="login-logo">&#128251; Radio<span>Verse</span></div>
+      <h2 class="login-title">Welcome back</h2>
+      <p class="login-sub">Sign in to listen. Access is <strong>invite-only</strong> &mdash; ask an administrator to create your account.</p>
+      <form id="login-form" novalidate>
+        <label class="login-field">
+          <span>Email</span>
+          <input type="email" id="login-email" placeholder="you@example.com" autocomplete="username" required>
+        </label>
+        <label class="login-field">
+          <span>Password</span>
+          <input type="password" id="login-password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="current-password" required>
+        </label>
+        <p id="login-error" class="login-error" role="alert" hidden></p>
+        <button type="submit" id="login-submit" class="login-submit">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/auth.js" type="module"></script>
+
 </body>
 </html>

@@ -667,11 +667,15 @@ function setFavoritesMode(on) {
 
 /* ---------------- Init ---------------- */
 
-(async function init() {
+function init() {
   initFavorites();
   bindEvents();
   $("hero-count").textContent = "Thousands of live stations";
-  state.apiBase = await pickApiBase();
-  loadFilters();
-  loadStations({ reset: true });
-})();
+  pickApiBase().then((base) => {
+    state.apiBase = base;
+    loadFilters();
+    loadStations({ reset: true });
+  });
+}
+
+window.RADIOVERSE_APP = { init, stopPlayer };

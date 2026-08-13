@@ -22,6 +22,44 @@ Built with vanilla HTML / CSS / JavaScript. No build step, no dependencies — i
 
 Stations are pulled live from the [Radio Browser](https://www.radio-browser.info) community directory (no API key required). Thousands of working stations are catalogued with country, language, genre, bitrate and stream URL.
 
+## Authentication (invite-only, via Supabase)
+
+The site supports optional invite-only login powered by [Supabase Auth](https://supabase.com/auth) (free tier). Passwords are hashed and managed by Supabase — they are never stored in this codebase. This project ships with a `LICENSE`-free "all rights reserved" policy and a copyright notice in the footer.
+
+### How it works
+
+- Without credentials configured, the site runs in **public mode** (everyone can browse and stream).
+- With credentials configured, the whole app is gated behind a **sign-in screen**. There is no public signup — accounts are created by an administrator only.
+
+### Setup
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. In **Project Settings > API**, copy the **Project URL** and the **anon public key**.
+3. Paste them into `js/config.js`:
+
+   ```js
+   window.RADIOVERSE_CONFIG = {
+     supabaseUrl: "https://YOUR-PROJECT.supabase.co",
+     supabaseAnonKey: "YOUR-ANON-PUBLIC-KEY",
+   };
+   ```
+
+4. In **Authentication > Providers**, make sure **Email** is enabled.
+5. Disable public signups (default): **Authentication > Sign In / Up > "Allow new users to sign up" OFF**.
+
+### Managing users (adding/resetting people)
+
+- **Add a user**: Supabase Dashboard > **Authentication > Users > "Add user"**, set their email and a temporary password, and give it to them privately. They can't change their password through this app yet, so use a shared, strong password per user or update it from the dashboard.
+- **Reset a forgotten password**: Dashboard > **Authentication > Users > select the user > "Reset password"** (sends an email if email is confirmed) or set a new temporary password.
+- **Block someone**: Dashboard > **Authentication > Users > select the user > "Block user"** (revokes access immediately).
+- You never see a user's real password — only Supabase stores it (bcrypt-hashed).
+
+### Security notes
+
+- Only the **anon** (public) key is used in the browser; it is safe to embed.
+- Never paste the **service_role** key into `js/config.js` — it grants full admin powers and must stay server-side.
+- Treat every user's credentials as private; share them only with the intended person.
+
 ## Running Locally
 
 Serve the folder with any static file server:
