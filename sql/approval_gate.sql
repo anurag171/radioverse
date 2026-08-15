@@ -67,6 +67,26 @@ insert into public.profiles (id, email, status)
 select id, email, 'approved' from auth.users
 on conflict (id) do update set status = 'approved';
 
+-- 7b) Admin delete user (works without an Edge Function). Runs as the table
+-- owner (postgres) so it can remove the auth account; only the owner email
+-- is allowed to call it.
+create or replace function public.admin_delete_user(target_user_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = auth, public
+as $$
+begin
+  if lower(coalesce(auth.jwt() ->> 'email', '')) <> lower('anurag171@gmail.com') then
+    raise exception 'Forbidden: only the administrator can delete users';
+  end if;
+  delete from auth.users where id = target_user_id;
+end;
+$$;
+
+revoke all on function public.admin_delete_user(uuid) from public;
+grant execute on function public.admin_delete_user(uuid) to authenticated;
+
 -- 8) Grant admin role to the owner account (case-insensitive)
 update public.profiles
 set is_admin = true, status = 'approved'

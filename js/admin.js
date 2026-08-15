@@ -16,40 +16,6 @@ function boot() {
   $("admin-close").addEventListener("click", close);
 }
 
-// Admin operations that need the service_role key run through the
-// Edge Function; if it is not deployed, callers get a clear hint.
-async function callAdmin(action, payload = {}) {
-  const { data } = await supabase.auth.getSession();
-  const token = data?.session?.access_token;
-  if (!token) throw new Error("Not signed in.");
-
-  const url = `${config.supabaseUrl}/functions/v1/admin-api`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ action, ...payload }),
-  });
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
-  return body;
-}
-
-// Check if the Edge Function is deployed (one lightweight call).
-let edgeAvailable = null;
-async function detectEdgeFunction() {
-  if (edgeAvailable !== null) return edgeAvailable;
-  try {
-    await callAdmin("list_users");
-    edgeAvailable = true;
-  } catch (e) {
-    edgeAvailable = false;
-  }
-  return edgeAvailable;
-}
-
 function setStatus(message, isError = false) {
   const el = $("admin-status");
   el.hidden = !message;
@@ -218,16 +184,11 @@ function userCard(u) {
       const ok = window.confirm(`Delete the account of ${u.email}? This cannot be undone.`);
       if (!ok) return;
       await run(async () => {
-        try {
-          await callAdmin("delete_user", { user_id: u.id });
-          setStatus(`Deleted ${u.email}.`, false);
-        } catch (err) {
-          setStatus(
-            "Could not delete via the admin API. Deploy the admin-api Edge Function, " +
-              "or delete manually in Supabase Dashboard > Authentication > Users.",
-            true
-          );
-        }
+        const { error } = await supabase.rpc("admin_delete_user", {
+          target_user_id: u.id,
+        });
+        if (error) throw error;
+        setStatus(`Deleted ${u.email}.`, false);
         await refresh();
       });
     }
