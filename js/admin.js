@@ -16,6 +16,8 @@ function boot() {
   $("admin-close").addEventListener("click", close);
 }
 
+// Admin operations that need the service_role key run through the
+// Edge Function; if it is not deployed, callers get a clear hint.
 async function callAdmin(action, payload = {}) {
   const { data } = await supabase.auth.getSession();
   const token = data?.session?.access_token;
@@ -33,6 +35,19 @@ async function callAdmin(action, payload = {}) {
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
   return body;
+}
+
+// Check if the Edge Function is deployed (one lightweight call).
+let edgeAvailable = null;
+async function detectEdgeFunction() {
+  if (edgeAvailable !== null) return edgeAvailable;
+  try {
+    await callAdmin("list_users");
+    edgeAvailable = true;
+  } catch (e) {
+    edgeAvailable = false;
+  }
+  return edgeAvailable;
 }
 
 function setStatus(message, isError = false) {
@@ -71,13 +86,19 @@ async function refresh() {
   wrap.innerHTML = '<div class="admin-loading">Loading users&#8230;</div>';
   $("admin-empty").hidden = true;
   try {
-    const { users: list } = await callAdmin("list_users");
-    users = (list || []).sort((a, b) => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, email, full_name, status, is_admin, default_country, created_at")
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+
+    users = (data || []).sort((a, b) => {
       const aIsMe = (a.email || "").toLowerCase() === ADMIN_EMAIL ? 0 : 1;
       const bIsMe = (b.email || "").toLowerCase() === ADMIN_EMAIL ? 0 : 1;
       if (aIsMe !== bIsMe) return aIsMe - bIsMe;
       return (a.email || "").localeCompare(b.email || "");
     });
+
     if (users.length === 0) {
       $("admin-empty").hidden = false;
     }
@@ -149,7 +170,6 @@ function userCard(u) {
         <div class="admin-field"><span class="admin-label">Name</span>${nameCell}</div>
         <div class="admin-field"><span class="admin-label">Default country</span>${countryCell}</div>
         <div class="admin-field admin-meta"><span class="admin-label">Joined</span><span>${escapeHtml(fmtDate(u.created_at))}</span></div>
-        <div class="admin-field admin-meta"><span class="admin-label">Confirmed</span><span>${u.confirmed_at ? escapeHtml(fmtDate(u.confirmed_at)) : "<em>no</em>"}</span></div>
       </div>
       <div class="admin-user-actions">${actions}</div>
     </div>
@@ -171,9 +191,22 @@ function userCard(u) {
       const country = card.querySelector('[data-field="default_country"]').value.trim();
       const status = card.querySelector('[data-field="status"]').value;
       await run(async () => {
-        await callAdmin("update_profile", { user_id: u.id, full_name: fullName, default_country: country });
+        const updates = {};
+        if (fullName !== u.full_name) updates.full_name = fullName;
+        if (country !== u.default_country) updates.default_country = country;
+        if (Object.keys(updates).length) {
+          const { error } = await supabase
+            .from("profiles")
+            .update(updates)
+            .eq("id", u.id);
+          if (error) throw error;
+        }
         if (status !== u.status) {
-          await callAdmin("set_status", { user_id: u.id, status });
+          const { error } = await supabase
+            .from("profiles")
+            .update({ status })
+            .eq("id", u.id);
+          if (error) throw error;
         }
         editingId = null;
         await refresh();
@@ -185,8 +218,16 @@ function userCard(u) {
       const ok = window.confirm(`Delete the account of ${u.email}? This cannot be undone.`);
       if (!ok) return;
       await run(async () => {
-        await callAdmin("delete_user", { user_id: u.id });
-        setStatus(`Deleted ${u.email}.`, false);
+        try {
+          await callAdmin("delete_user", { user_id: u.id });
+          setStatus(`Deleted ${u.email}.`, false);
+        } catch (err) {
+          setStatus(
+            "Could not delete via the admin API. Deploy the admin-api Edge Function, " +
+              "or delete manually in Supabase Dashboard > Authentication > Users.",
+            true
+          );
+        }
         await refresh();
       });
     }
@@ -196,25 +237,13 @@ function userCard(u) {
 }
 
 async function promptReset(u) {
-  const password = window.prompt(
-    `Set a new temporary password for ${u.email} (min 6 chars).\n\nLeave empty to just send a reset email instead.`
-  );
-  if (password === null) return; // cancelled
-
-  if (password && password.length < 6) {
-    setStatus("Password must be at least 6 characters.", true);
-    return;
+  setStatus("");
+  try {
+    await supabase.auth.resetPasswordForEmail(u.email);
+    setStatus(`Password reset email sent to ${u.email}.`, false);
+  } catch (e) {
+    setStatus(`Could not send reset email: ${e.message}`, true);
   }
-
-  await run(async () => {
-    if (password) {
-      await callAdmin("reset_password", { user_id: u.id, password });
-      setStatus(`Password reset for ${u.email}.`, false);
-    } else {
-      await callAdmin("send_reset_email", { email: u.email });
-      setStatus(`Reset email sent to ${u.email}.`, false);
-    }
-  });
 }
 
 async function run(fn) {

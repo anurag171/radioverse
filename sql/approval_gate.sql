@@ -56,6 +56,12 @@ create policy "Admins can read all profiles"
   on public.profiles for select
   using (lower(auth.jwt() ->> 'email') = lower('anurag171@gmail.com'));
 
+-- 6b) Admins can update any profile (approve/reject, edit name & country)
+drop policy if exists "Admins can update all profiles" on public.profiles;
+create policy "Admins can update all profiles"
+  on public.profiles for update
+  using (lower(auth.jwt() ->> 'email') = lower('anurag171@gmail.com'));
+
 -- 7) Backfill: existing accounts stay active (upsert, in case a row exists)
 insert into public.profiles (id, email, status)
 select id, email, 'approved' from auth.users
