@@ -46,14 +46,28 @@ The site supports optional invite-only login powered by [Supabase Auth](https://
 
 4. In **Authentication > Providers**, make sure **Email** is enabled.
 5. **Allow public signups** so users can request access: **Authentication > Sign In / Up > "Allow new users to sign up" ON**.
-6. **Require admin approval before anyone can sign in**: in **Authentication > Providers > Email**, turn **"Enable automatic confirmations" OFF**. This puts every new signup in a *pending* state — the user cannot log in until an administrator approves their account in the Dashboard (below).
+6. **Keep email confirmation ON**: **Authentication > Providers > Email > "Enable automatic confirmations" OFF**. Users must click the confirmation link (or enter the 6-digit code) from the signup email before they can attempt to sign in.
+7. **Add the admin-approval gate**: open **SQL Editor** and run the script in `sql/approval_gate.sql`. This creates a `profiles` table, automatically registers every new signup as `pending`, and marks all *existing* accounts as `approved`.
 
 ### Registration & approval flow
 
 - A visitor clicks **"New here? Request access"** on the sign-in screen and fills in their name, email and password.
-- Their account is created but **unconfirmed** — they see a *"Account pending approval"* message and cannot sign in yet.
-- An administrator approves them in the Dashboard: **Authentication > Users > select the user > "Confirm"** (this is the only place that activates the account).
-- Only after approval can the user sign in with the email and password they chose.
+- They receive a **confirmation email**. Confirming it proves the address is real — but it does **not** activate the account.
+- The account stays locked in *"Account pending approval"* until an administrator flips its status to `approved` (below). Confirming the email alone is never enough to sign in.
+- Only after admin approval can the user sign in with the email and password they chose.
+
+### Approving a user
+
+An account is activated only when an administrator sets its status to `approved` in the `profiles` table. Either way works:
+
+- **Table Editor**: open the **profiles** table, find the user's row, change `status` from `pending` to `approved`, save. (The user's UUID is the row id; you can look up the UUID in **Authentication > Users**.)
+- **SQL Editor**: run
+
+  ```sql
+  update public.profiles set status = 'approved' where email = 'user@example.com';
+  ```
+
+  (Run it without the `where email` clause to approve everyone.)
 
 ### Managing users (adding/resetting people)
 

@@ -41,7 +41,32 @@ function boot() {
   });
 }
 
-function enterApp(user) {
+async function getApprovalStatus(user) {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("status")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (error) {
+      console.warn("Could not read approval status:", error.message);
+      return null;
+    }
+    return data ? data.status : null;
+  } catch (err) {
+    console.warn("Could not read approval status:", err);
+    return null;
+  }
+}
+
+async function enterApp(user) {
+  const status = await getApprovalStatus(user);
+  if (status !== "approved") {
+    await supabase.auth.signOut().catch(() => {});
+    showPanel("pending");
+    return;
+  }
   $("login-screen").hidden = true;
   document.body.classList.add("authed");
   $("user-label").textContent = user.email || "Signed in";
