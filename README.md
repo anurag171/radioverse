@@ -45,7 +45,15 @@ The site supports optional invite-only login powered by [Supabase Auth](https://
    ```
 
 4. In **Authentication > Providers**, make sure **Email** is enabled.
-5. Disable public signups (default): **Authentication > Sign In / Up > "Allow new users to sign up" OFF**.
+5. **Allow public signups** so users can request access: **Authentication > Sign In / Up > "Allow new users to sign up" ON**.
+6. **Require admin approval before anyone can sign in**: in **Authentication > Providers > Email**, turn **"Enable automatic confirmations" OFF**. This puts every new signup in a *pending* state — the user cannot log in until an administrator approves their account in the Dashboard (below).
+
+### Registration & approval flow
+
+- A visitor clicks **"New here? Request access"** on the sign-in screen and fills in their name, email and password.
+- Their account is created but **unconfirmed** — they see a *"Account pending approval"* message and cannot sign in yet.
+- An administrator approves them in the Dashboard: **Authentication > Users > select the user > "Confirm"** (this is the only place that activates the account).
+- Only after approval can the user sign in with the email and password they chose.
 
 ### Managing users (adding/resetting people)
 

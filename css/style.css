@@ -980,6 +980,24 @@ main {
   text-align: center;
 }
 
+.login-link {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  background: none;
+  border: none;
+  color: var(--cyan);
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.login-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
 .login-submit {
   width: 100%;
   margin-top: 20px;

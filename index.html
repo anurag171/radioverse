@@ -131,21 +131,54 @@
 
   <div id="login-screen" class="login-screen" hidden>
     <div class="login-card">
-      <div class="login-logo">&#128251; Radio<span>Verse</span></div>
-      <h2 class="login-title">Welcome back</h2>
-      <p class="login-sub">Sign in to listen. Access is <strong>invite-only</strong> &mdash; ask an administrator to create your account.</p>
-      <form id="login-form" novalidate>
-        <label class="login-field">
-          <span>Email</span>
-          <input type="email" id="login-email" placeholder="you@example.com" autocomplete="username" required>
-        </label>
-        <label class="login-field">
-          <span>Password</span>
-          <input type="password" id="login-password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="current-password" required>
-        </label>
-        <p id="login-error" class="login-error" role="alert" hidden></p>
-        <button type="submit" id="login-submit" class="login-submit">Sign in</button>
-      </form>
+      <div id="login-panel">
+        <div class="login-logo">&#128251; Radio<span>Verse</span></div>
+        <h2 class="login-title">Welcome back</h2>
+        <p class="login-sub">Sign in to listen. Access is <strong>invite-only</strong> &mdash; new accounts need administrator approval.</p>
+        <form id="login-form" novalidate>
+          <label class="login-field">
+            <span>Email</span>
+            <input type="email" id="login-email" placeholder="you@example.com" autocomplete="username" required>
+          </label>
+          <label class="login-field">
+            <span>Password</span>
+            <input type="password" id="login-password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="current-password" required>
+          </label>
+          <p id="login-error" class="login-error" role="alert" hidden></p>
+          <button type="submit" id="login-submit" class="login-submit">Sign in</button>
+        </form>
+        <button type="button" id="show-register" class="login-link">New here? Request access</button>
+      </div>
+
+      <div id="register-panel" hidden>
+        <div class="login-logo">&#128251; Radio<span>Verse</span></div>
+        <h2 class="login-title">Request access</h2>
+        <p class="login-sub">Create an account. An administrator will approve it before you can sign in.</p>
+        <form id="register-form" novalidate>
+          <label class="login-field">
+            <span>Name</span>
+            <input type="text" id="register-name" placeholder="Your name" autocomplete="name">
+          </label>
+          <label class="login-field">
+            <span>Email</span>
+            <input type="email" id="register-email" placeholder="you@example.com" autocomplete="username" required>
+          </label>
+          <label class="login-field">
+            <span>Password</span>
+            <input type="password" id="register-password" placeholder="At least 6 characters" autocomplete="new-password" required>
+          </label>
+          <p id="register-error" class="login-error" role="alert" hidden></p>
+          <button type="submit" id="register-submit" class="login-submit">Request access</button>
+        </form>
+        <button type="button" id="show-login" class="login-link">Already have access? Sign in</button>
+      </div>
+
+      <div id="pending-panel" hidden>
+        <div class="login-logo">&#128251; Radio<span>Verse</span></div>
+        <h2 class="login-title">Account pending approval</h2>
+        <p class="login-sub">Your account has been created and is waiting for an administrator to approve it. You will be able to sign in once it has been approved.</p>
+        <button type="button" id="pending-login" class="login-submit">Back to sign in</button>
+      </div>
     </div>
   </div>
 

@@ -32,6 +32,10 @@ function boot() {
   });
 
   $("login-form").addEventListener("submit", handleLogin);
+  $("register-form").addEventListener("submit", handleRegister);
+  $("show-register").addEventListener("click", () => showPanel("register"));
+  $("show-login").addEventListener("click", () => showPanel("login"));
+  $("pending-login").addEventListener("click", () => showPanel("login"));
   $("signout-btn").addEventListener("click", () => {
     supabase.auth.signOut().catch(() => {});
   });
@@ -52,8 +56,16 @@ function showLogin() {
   $("login-screen").hidden = false;
   document.body.classList.remove("authed");
   $("account-chip").hidden = true;
+  showPanel("login");
   const app = window.RADIOVERSE_APP;
   if (app && typeof app.stopPlayer === "function") app.stopPlayer();
+}
+
+function showPanel(name) {
+  const panels = ["login", "register", "pending"];
+  for (const p of panels) {
+    $(`${p}-panel`).hidden = p !== name;
+  }
 }
 
 async function handleLogin(e) {
@@ -75,8 +87,12 @@ async function handleLogin(e) {
   try {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      errorEl.textContent = error.message;
-      errorEl.hidden = false;
+      if (error.message && /email not confirmed/i.test(error.message)) {
+        showPanel("pending");
+      } else {
+        errorEl.textContent = error.message;
+        errorEl.hidden = false;
+      }
     }
   } catch (err) {
     errorEl.textContent = "Something went wrong. Try again.";
@@ -84,6 +100,52 @@ async function handleLogin(e) {
   } finally {
     submit.disabled = false;
     submit.textContent = "Sign in";
+  }
+}
+
+async function handleRegister(e) {
+  e.preventDefault();
+  const name = $("register-name").value.trim();
+  const email = $("register-email").value.trim();
+  const password = $("register-password").value;
+  const errorEl = $("register-error");
+  const submit = $("register-submit");
+
+  errorEl.hidden = true;
+  if (!email || !password) {
+    errorEl.textContent = "Enter both email and password.";
+    errorEl.hidden = false;
+    return;
+  }
+  if (password.length < 6) {
+    errorEl.textContent = "Password must be at least 6 characters.";
+    errorEl.hidden = false;
+    return;
+  }
+
+  submit.disabled = true;
+  submit.textContent = "Submitting\u2026";
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: name } },
+    });
+    if (error) {
+      errorEl.textContent = error.message;
+      errorEl.hidden = false;
+      return;
+    }
+    if (data.session) {
+      await supabase.auth.signOut().catch(() => {});
+    }
+    showPanel("pending");
+  } catch (err) {
+    errorEl.textContent = "Something went wrong. Try again.";
+    errorEl.hidden = false;
+  } finally {
+    submit.disabled = false;
+    submit.textContent = "Request access";
   }
 }
 
