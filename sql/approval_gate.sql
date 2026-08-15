@@ -54,14 +54,14 @@ create policy "Users can read own profile"
 drop policy if exists "Admins can read all profiles" on public.profiles;
 create policy "Admins can read all profiles"
   on public.profiles for select
-  using (auth.jwt() ->> 'email' = 'anurag171@gmail.com');
+  using (lower(auth.jwt() ->> 'email') = lower('anurag171@gmail.com'));
 
--- 7) Backfill: existing accounts stay active
+-- 7) Backfill: existing accounts stay active (upsert, in case a row exists)
 insert into public.profiles (id, email, status)
 select id, email, 'approved' from auth.users
-on conflict (id) do nothing;
+on conflict (id) do update set status = 'approved';
 
--- 8) Grant admin role to the owner account
+-- 8) Grant admin role to the owner account (case-insensitive)
 update public.profiles
 set is_admin = true, status = 'approved'
-where email = 'anurag171@gmail.com';
+where lower(email) = lower('anurag171@gmail.com');
