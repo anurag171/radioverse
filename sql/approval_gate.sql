@@ -22,6 +22,8 @@ create table if not exists public.profiles (
 -- 2) Add new columns if upgrading an existing install
 alter table public.profiles add column if not exists is_admin boolean not null default false;
 alter table public.profiles add column if not exists default_country text;
+alter table public.profiles add column if not exists is_premium boolean not null default false;
+alter table public.profiles add column if not exists active_session text;
 
 -- 3) Auto-create a profile row ('pending') whenever a new user signs up
 create or replace function public.handle_new_user()
@@ -86,6 +88,26 @@ $$;
 
 revoke all on function public.admin_delete_user(uuid) from public;
 grant execute on function public.admin_delete_user(uuid) to authenticated;
+
+-- 7c) Single active session: a signed-in user records a unique marker here.
+-- The app periodically re-reads it; if it no longer matches, the user was
+-- signed in on another device (last login wins). Only ever touches the
+-- caller's own row, so it is safe to expose to authenticated users.
+create or replace function public.claim_session(p_marker text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.profiles
+  set active_session = p_marker
+  where id = auth.uid();
+end;
+$$;
+
+revoke all on function public.claim_session(text) from public;
+grant execute on function public.claim_session(text) to authenticated;
 
 -- 8) Grant admin role to the owner account (case-insensitive)
 update public.profiles

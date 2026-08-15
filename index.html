@@ -24,7 +24,9 @@
       <input id="search-input" type="search" placeholder="Search stations, e.g. Radio Mirchi" autocomplete="off" aria-label="Search stations">
       <div id="account-chip" class="account" hidden>
         <span id="user-label" class="user-label"></span>
+        <span id="premium-badge" class="premium-badge" title="Premium member" hidden>&#9733;</span>
         <button id="admin-btn" class="signout-btn admin-btn" type="button" title="User management" hidden>Admin</button>
+        <button id="support-btn" class="signout-btn" type="button" title="Support RadioVerse" hidden>Support</button>
         <button id="signout-btn" class="signout-btn" type="button" title="Sign out">Sign out</button>
       </div>
       <button id="favorites-toggle" class="fav-toggle" title="Show my favorites" aria-pressed="false">
@@ -179,6 +181,13 @@
         <h2 class="login-title">Account pending approval</h2>
         <p class="login-sub">Your account has been created and is waiting for an administrator to approve it. You will be able to sign in once it has been approved.</p>
         <button type="button" id="pending-login" class="login-submit">Back to sign in</button>
+      </div>
+
+      <div id="kicked-panel" hidden>
+        <div class="login-logo">&#128251; Radio<span>Verse</span></div>
+        <h2 class="login-title">Signed out</h2>
+        <p class="login-sub">This account was just used to sign in on another device, so you've been signed out here. Each account allows one active connection at a time. Sign back in to take over this session.</p>
+        <button type="button" id="kicked-login" class="login-submit">Back to sign in</button>
       </div>
     </div>
   </div>

@@ -47,7 +47,7 @@ The site supports optional invite-only login powered by [Supabase Auth](https://
 4. In **Authentication > Providers**, make sure **Email** is enabled.
 5. **Allow public signups** so users can request access: **Authentication > Sign In / Up > "Allow new users to sign up" ON**.
 6. **Keep email confirmation ON**: **Authentication > Providers > Email > "Enable automatic confirmations" OFF**. Users must click the confirmation link (or enter the 6-digit code) from the signup email before they can attempt to sign in.
-7. **Add the admin-approval gate**: open **SQL Editor** and run the script in `sql/approval_gate.sql`. This creates a `profiles` table (with `status`, `is_admin` and `default_country`), automatically registers every new signup as `pending`, and marks all *existing* accounts as `approved` — plus the owner account (`anurag171@gmail.com`) as admin with read/update access to every profile. It also creates the `admin_delete_user` function used by the Admin page's Delete button (a `security definer` function that only the owner email may call).
+7. **Add the admin-approval gate**: open **SQL Editor** and run the script in `sql/approval_gate.sql`. This creates a `profiles` table (with `status`, `is_admin`, `is_premium`, `default_country` and `active_session`), automatically registers every new signup as `pending`, and marks all *existing* accounts as `approved` — plus the owner account (`anurag171@gmail.com`) as admin with read/update access to every profile. It also creates the `admin_delete_user` function (used by Delete) and `claim_session` (used by the one-active-connection lock).
 
 ### Registration & approval flow
 
@@ -83,6 +83,15 @@ The Admin button only appears for the owner account. Everything runs client-side
 ### Default country
 
 Each user's `profiles.default_country` decides which country is pre-selected when the app loads (falling back to India). The admin can set it in the Admin page; users can also just pick another country from the dropdown at any time.
+
+### One active connection per account
+
+To stop passwords being shared, each non-premium account allows **one active sign-in at a time** ("last login wins"). Signing in on a new device records a session marker in `profiles.active_session`; the older device notices within ~30 seconds and is signed out with a *"Signed out"* screen. Premium members are exempt and may be signed in on multiple devices at once.
+
+### Premium & support
+
+- **Premium**: the admin can toggle a user's `is_premium` flag in the Admin page (Edit user > "Premium member"). Premium members see a gold star in the top bar and skip the one-connection limit.
+- **Support button**: a **Support** button appears in the top bar for signed-in users. Point it at any donation/payment URL (Buy Me a Coffee, Ko-fi, UPI, etc.) by setting `supportUrl` in `js/config.js`. Leave it empty to hide the button.
 
 ### Managing users (adding/resetting people)
 

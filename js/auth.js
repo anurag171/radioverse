@@ -4,6 +4,8 @@ const config = window.RADIOVERSE_CONFIG || {};
 
 let supabase = null;
 let appInited = false;
+let sessionCheckTimer = null;
+const LS_SESSION = "radioverse.session";
 
 const $ = (id) => document.getElementById(id);
 
@@ -28,7 +30,11 @@ function boot() {
 
   supabase.auth.onAuthStateChange((event, session) => {
     if (event === "SIGNED_IN" && session) enterApp(session.user);
-    if (event === "SIGNED_OUT") showLogin();
+    if (event === "SIGNED_OUT") {
+      stopSessionCheck();
+      localStorage.removeItem(LS_SESSION);
+      showLogin();
+    }
   });
 
   $("login-form").addEventListener("submit", handleLogin);
@@ -36,6 +42,11 @@ function boot() {
   $("show-register").addEventListener("click", () => showPanel("register"));
   $("show-login").addEventListener("click", () => showPanel("login"));
   $("pending-login").addEventListener("click", () => showPanel("login"));
+  $("kicked-login").addEventListener("click", () => showPanel("login"));
+  $("support-btn").addEventListener("click", () => {
+    const url = (config.supportUrl || "").trim();
+    if (url) window.open(url, "_blank", "noopener");
+  });
   $("signout-btn").addEventListener("click", () => {
     supabase.auth.signOut().catch(() => {});
   });
@@ -51,7 +62,7 @@ async function getProfile(user) {
   try {
     const { data, error } = await supabase
       .from("profiles")
-      .select("status, full_name, is_admin, default_country")
+      .select("status, full_name, is_admin, is_premium, default_country")
       .eq("id", user.id)
       .maybeSingle();
     if (error) {
@@ -86,10 +97,54 @@ async function enterApp(user) {
   $("user-label").textContent = profile.full_name || user.email || "Signed in";
   $("account-chip").hidden = false;
   $("admin-btn").hidden = !isAdmin(user);
+  $("premium-badge").hidden = !profile.is_premium;
+  $("support-btn").hidden = !(config.supportUrl || "").trim();
   if (!appInited) {
     appInited = true;
     window.RADIOVERSE_APP.init();
   }
+  startSessionCheck(user, profile);
+}
+
+function startSessionCheck(user, profile) {
+  stopSessionCheck();
+  if (!supabase || profile.is_premium) return;
+
+  const marker = sessionMarker();
+  localStorage.setItem(LS_SESSION, marker);
+  supabase.rpc("claim_session", { p_marker: marker }).catch(() => {});
+
+  sessionCheckTimer = setInterval(async () => {
+    const mine = localStorage.getItem(LS_SESSION);
+    if (!mine) return;
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("active_session")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (error || !data) return;
+    if (data.active_session && data.active_session !== mine) {
+      stopSessionCheck();
+      localStorage.removeItem(LS_SESSION);
+      await supabase.auth.signOut().catch(() => {});
+      showPanel("kicked");
+    }
+  }, 30000);
+}
+
+function stopSessionCheck() {
+  if (sessionCheckTimer) {
+    clearInterval(sessionCheckTimer);
+    sessionCheckTimer = null;
+  }
+}
+
+function sessionMarker() {
+  const id = localStorage.getItem(LS_SESSION);
+  if (id) return id;
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 function showLogin() {
@@ -97,6 +152,8 @@ function showLogin() {
   document.body.classList.remove("authed");
   $("account-chip").hidden = true;
   $("admin-btn").hidden = true;
+  $("premium-badge").hidden = true;
+  $("support-btn").hidden = true;
   if (window.RADIOVERSE_ADMIN && typeof window.RADIOVERSE_ADMIN.close === "function") {
     window.RADIOVERSE_ADMIN.close();
   }
@@ -106,7 +163,7 @@ function showLogin() {
 }
 
 function showPanel(name) {
-  const panels = ["login", "register", "pending"];
+  const panels = ["login", "register", "pending", "kicked"];
   for (const p of panels) {
     $(`${p}-panel`).hidden = p !== name;
   }

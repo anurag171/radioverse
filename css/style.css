@@ -871,6 +871,12 @@ main {
   text-overflow: ellipsis;
 }
 
+.premium-badge {
+  color: var(--amber);
+  font-size: 15px;
+  line-height: 1;
+}
+
 .signout-btn {
   padding: 5px 12px;
   border-radius: 999px;
@@ -1215,6 +1221,22 @@ main {
 .admin-select:focus {
   outline: none;
   border-color: var(--cyan);
+}
+
+.admin-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.admin-toggle input {
+  accent-color: var(--green);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }
 
 .admin-user-actions {

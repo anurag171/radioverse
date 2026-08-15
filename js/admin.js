@@ -54,7 +54,7 @@ async function refresh() {
   try {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, email, full_name, status, is_admin, default_country, created_at")
+      .select("id, email, full_name, status, is_admin, is_premium, default_country, created_at")
       .order("created_at", { ascending: true });
     if (error) throw error;
 
@@ -119,6 +119,10 @@ function userCard(u) {
        <datalist id="admin-countries">${countryOptions()}</datalist>`
     : `<span class="admin-country">${escapeHtml(u.default_country || "—")}</span>`;
 
+  const premiumCell = isEditing
+    ? `<label class="admin-toggle"><input type="checkbox" data-field="is_premium" ${u.is_premium ? "checked" : ""} /> <span>Premium member</span></label>`
+    : `<span class="admin-country">${u.is_premium ? "&#9733; Premium" : "—"}</span>`;
+
   const actions = isEditing
     ? `<button type="button" class="admin-btn-sm primary" data-action="save">Save</button>
        <button type="button" class="admin-btn-sm" data-action="cancel">Cancel</button>`
@@ -136,6 +140,7 @@ function userCard(u) {
       <div class="admin-user-fields">
         <div class="admin-field"><span class="admin-label">Name</span>${nameCell}</div>
         <div class="admin-field"><span class="admin-label">Default country</span>${countryCell}</div>
+        <div class="admin-field"><span class="admin-label">Membership</span>${premiumCell}</div>
         <div class="admin-field admin-meta"><span class="admin-label">Joined</span><span>${escapeHtml(fmtDate(u.created_at))}</span></div>
       </div>
       <div class="admin-user-actions">${actions}</div>
@@ -157,10 +162,13 @@ function userCard(u) {
       const fullName = card.querySelector('[data-field="full_name"]').value.trim();
       const country = card.querySelector('[data-field="default_country"]').value.trim();
       const status = card.querySelector('[data-field="status"]').value;
+      const premiumInput = card.querySelector('[data-field="is_premium"]');
+      const premium = premiumInput ? premiumInput.checked : u.is_premium;
       await run(async () => {
         const updates = {};
         if (fullName !== u.full_name) updates.full_name = fullName;
         if (country !== u.default_country) updates.default_country = country;
+        if (premium !== !!u.is_premium) updates.is_premium = premium;
         if (Object.keys(updates).length) {
           const { error } = await supabase
             .from("profiles")
