@@ -24,6 +24,7 @@
       <input id="search-input" type="search" placeholder="Search stations, e.g. Radio Mirchi" autocomplete="off" aria-label="Search stations">
       <div id="account-chip" class="account" hidden>
         <span id="user-label" class="user-label"></span>
+        <button id="admin-btn" class="signout-btn admin-btn" type="button" title="User management" hidden>Admin</button>
         <button id="signout-btn" class="signout-btn" type="button" title="Sign out">Sign out</button>
       </div>
       <button id="favorites-toggle" class="fav-toggle" title="Show my favorites" aria-pressed="false">
@@ -182,9 +183,25 @@
     </div>
   </div>
 
+  <div id="admin-screen" class="admin-screen" hidden>
+    <div class="admin-card">
+      <div class="admin-head">
+        <div>
+          <h2 class="admin-title">User management</h2>
+          <p class="admin-sub">Approve, edit, reset or remove accounts.</p>
+        </div>
+        <button type="button" id="admin-close" class="login-submit admin-close">Back to player</button>
+      </div>
+      <p id="admin-status" class="admin-status" role="status" hidden></p>
+      <div id="admin-users" class="admin-users"></div>
+      <div id="admin-empty" class="admin-empty" hidden>No users found.</div>
+    </div>
+  </div>
+
   <script src="js/config.js"></script>
   <script src="js/app.js"></script>
   <script src="js/auth.js" type="module"></script>
+  <script src="js/admin.js" type="module"></script>
 
 </body>
 </html>

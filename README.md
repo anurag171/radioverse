@@ -47,7 +47,14 @@ The site supports optional invite-only login powered by [Supabase Auth](https://
 4. In **Authentication > Providers**, make sure **Email** is enabled.
 5. **Allow public signups** so users can request access: **Authentication > Sign In / Up > "Allow new users to sign up" ON**.
 6. **Keep email confirmation ON**: **Authentication > Providers > Email > "Enable automatic confirmations" OFF**. Users must click the confirmation link (or enter the 6-digit code) from the signup email before they can attempt to sign in.
-7. **Add the admin-approval gate**: open **SQL Editor** and run the script in `sql/approval_gate.sql`. This creates a `profiles` table, automatically registers every new signup as `pending`, and marks all *existing* accounts as `approved`.
+7. **Add the admin-approval gate**: open **SQL Editor** and run the script in `sql/approval_gate.sql`. This creates a `profiles` table (with `status`, `is_admin` and `default_country`), automatically registers every new signup as `pending`, and marks all *existing* accounts as `approved` — plus the owner account (`anurag171@gmail.com`) as admin.
+8. **Deploy the admin API** (Edge Function): this is how the Admin page deletes users and resets passwords — those operations need the `service_role` key, which never touches the browser. With the [Supabase CLI](https://supabase.com/docs/guides/cli):
+   ```bash
+   npx supabase link --project-ref YOUR_PROJECT_REF
+   npx supabase secrets set SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
+   npx supabase functions deploy admin-api --no-verify-jwt
+   ```
+   (The function lives in `supabase/functions/admin-api/`. `SUPABASE_URL` is injected automatically.)
 
 ### Registration & approval flow
 
@@ -58,7 +65,7 @@ The site supports optional invite-only login powered by [Supabase Auth](https://
 
 ### Approving a user
 
-An account is activated only when an administrator sets its status to `approved` in the `profiles` table. Either way works:
+An account is activated only when an administrator sets its status to `approved` in the `profiles` table. The easiest way is the **Admin page** (below). Alternatively, from the dashboard:
 
 - **Table Editor**: open the **profiles** table, find the user's row, change `status` from `pending` to `approved`, save. (The user's UUID is the row id; you can look up the UUID in **Authentication > Users**.)
 - **SQL Editor**: run
@@ -68,6 +75,21 @@ An account is activated only when an administrator sets its status to `approved`
   ```
 
   (Run it without the `where email` clause to approve everyone.)
+
+### Admin page
+
+Sign in with `anurag171@gmail.com` and click **Admin** in the top bar. You can:
+
+- **Approve / reject** a user (change their `status`).
+- **Edit** a user's display name and **default country** (the country that user sees pre-selected when browsing stations).
+- **Reset password** — set a new temporary password, or send the user a reset email.
+- **Delete** a user (removes their auth account and profile).
+
+The Admin button only appears for the owner account. Every request goes through the `admin-api` Edge Function, which verifies the caller is the owner before using the `service_role` key.
+
+### Default country
+
+Each user's `profiles.default_country` decides which country is pre-selected when the app loads (falling back to India). The admin can set it in the Admin page; users can also just pick another country from the dropdown at any time.
 
 ### Managing users (adding/resetting people)
 
@@ -79,7 +101,7 @@ An account is activated only when an administrator sets its status to `approved`
 ### Security notes
 
 - Only the **anon** (public) key is used in the browser; it is safe to embed.
-- Never paste the **service_role** key into `js/config.js` — it grants full admin powers and must stay server-side.
+- Never paste the **service_role** key into `js/config.js` — it grants full admin powers and must stay server-side. It lives only as the `SERVICE_ROLE_KEY` secret on the `admin-api` Edge Function.
 - Treat every user's credentials as private; share them only with the intended person.
 
 ## Running Locally
@@ -105,6 +127,10 @@ Then open http://localhost:8080
 index.html         Layout: header, hero, filters, grid, mini player
 css/style.css      Dark neon responsive theme
 js/app.js          API integration, filters, favorites, player, metadata
+js/auth.js         Supabase login/registration, approval gate, admin button
+js/admin.js        Admin page: approve/reject/edit/reset/delete users
+sql/               Database setup scripts (approval gate + admin columns)
+supabase/functions/admin-api/   Edge Function used by the Admin page
 ```
 
 ## Privacy

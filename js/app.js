@@ -6,7 +6,7 @@ const API_BASES = [
   "https://all.api.radio-browser.info",
 ];
 const MAX_RESULTS = 120;
-const DEFAULT_COUNTRY = "India";
+let DEFAULT_COUNTRY = "India";
 const LS_FAVORITES = "radioverse.favorites";
 const LS_VOLUME = "radioverse.volume";
 
@@ -678,4 +678,12 @@ function init() {
   });
 }
 
-window.RADIOVERSE_APP = { init, stopPlayer };
+function setDefaultCountry(name) {
+  if (!name || typeof name !== "string") return;
+  DEFAULT_COUNTRY = name.trim();
+  state.country = DEFAULT_COUNTRY;
+  const sel = $("country-select");
+  if (sel && sel.options.length) sel.value = DEFAULT_COUNTRY;
+}
+
+window.RADIOVERSE_APP = { init, stopPlayer, setDefaultCountry };

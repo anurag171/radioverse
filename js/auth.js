@@ -39,38 +39,53 @@ function boot() {
   $("signout-btn").addEventListener("click", () => {
     supabase.auth.signOut().catch(() => {});
   });
+  $("admin-btn").addEventListener("click", () => {
+    if (window.RADIOVERSE_ADMIN && typeof window.RADIOVERSE_ADMIN.open === "function") {
+      window.RADIOVERSE_ADMIN.open();
+    }
+  });
 }
 
-async function getApprovalStatus(user) {
+async function getProfile(user) {
   if (!supabase) return null;
   try {
     const { data, error } = await supabase
       .from("profiles")
-      .select("status")
+      .select("status, full_name, is_admin, default_country")
       .eq("id", user.id)
       .maybeSingle();
     if (error) {
-      console.warn("Could not read approval status:", error.message);
+      console.warn("Could not read profile:", error.message);
       return null;
     }
-    return data ? data.status : null;
+    return data || null;
   } catch (err) {
-    console.warn("Could not read approval status:", err);
+    console.warn("Could not read profile:", err);
     return null;
   }
 }
 
+function isAdmin(user) {
+  return user && user.email === (config.adminEmail || "").trim().toLowerCase();
+}
+
 async function enterApp(user) {
-  const status = await getApprovalStatus(user);
+  const profile = await getProfile(user);
+  const status = profile ? profile.status : null;
   if (status !== "approved") {
     await supabase.auth.signOut().catch(() => {});
     showPanel("pending");
     return;
   }
+  const app = window.RADIOVERSE_APP;
+  if (app && typeof app.setDefaultCountry === "function") {
+    app.setDefaultCountry(profile.default_country);
+  }
   $("login-screen").hidden = true;
   document.body.classList.add("authed");
-  $("user-label").textContent = user.email || "Signed in";
+  $("user-label").textContent = profile.full_name || user.email || "Signed in";
   $("account-chip").hidden = false;
+  $("admin-btn").hidden = !isAdmin(user);
   if (!appInited) {
     appInited = true;
     window.RADIOVERSE_APP.init();
@@ -81,6 +96,10 @@ function showLogin() {
   $("login-screen").hidden = false;
   document.body.classList.remove("authed");
   $("account-chip").hidden = true;
+  $("admin-btn").hidden = true;
+  if (window.RADIOVERSE_ADMIN && typeof window.RADIOVERSE_ADMIN.close === "function") {
+    window.RADIOVERSE_ADMIN.close();
+  }
   showPanel("login");
   const app = window.RADIOVERSE_APP;
   if (app && typeof app.stopPlayer === "function") app.stopPlayer();
