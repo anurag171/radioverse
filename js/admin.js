@@ -122,7 +122,8 @@ function userCard(u) {
   const actions = isEditing
     ? `<button type="button" class="admin-btn-sm primary" data-action="save">Save</button>
        <button type="button" class="admin-btn-sm" data-action="cancel">Cancel</button>`
-    : `<button type="button" class="admin-btn-sm" data-action="edit" ${isMe ? "disabled" : ""}>Edit</button>
+    : `${statusQuickActions(u, isMe)}
+       <button type="button" class="admin-btn-sm" data-action="edit" ${isMe ? "disabled" : ""}>Edit</button>
        <button type="button" class="admin-btn-sm" data-action="reset" ${isMe ? "disabled" : ""}>Reset password</button>
        <button type="button" class="admin-btn-sm danger" data-action="delete" ${isMe ? "disabled" : ""}>Delete</button>`;
 
@@ -168,15 +169,29 @@ function userCard(u) {
           if (error) throw error;
         }
         if (status !== u.status) {
-          const { error } = await supabase
-            .from("profiles")
-            .update({ status })
-            .eq("id", u.id);
-          if (error) throw error;
+          await setUserStatus(u, status);
         }
         editingId = null;
         await refresh();
         setStatus("Changes saved.", false);
+      });
+    } else if (action === "approve") {
+      await run(async () => {
+        await setUserStatus(u, "approved");
+        setStatus(`${u.email} approved.`, false);
+        await refresh();
+      });
+    } else if (action === "unapprove") {
+      await run(async () => {
+        await setUserStatus(u, "pending");
+        setStatus(`${u.email} unapproved (set back to pending).`, false);
+        await refresh();
+      });
+    } else if (action === "reject") {
+      await run(async () => {
+        await setUserStatus(u, "rejected");
+        setStatus(`${u.email} rejected.`, false);
+        await refresh();
       });
     } else if (action === "reset") {
       await promptReset(u);
@@ -195,6 +210,27 @@ function userCard(u) {
   });
 
   return card;
+}
+
+async function setUserStatus(u, status) {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ status })
+    .eq("id", u.id);
+  if (error) throw error;
+}
+
+function statusQuickActions(u, isMe) {
+  if (isMe) return "";
+  const approved = u.status === "approved";
+  return `
+    ${approved
+      ? `<button type="button" class="admin-btn-sm" data-action="unapprove">Unapprove</button>`
+      : `<button type="button" class="admin-btn-sm primary" data-action="approve">Approve</button>`}
+    ${u.status === "pending"
+      ? `<button type="button" class="admin-btn-sm danger" data-action="reject">Reject</button>`
+      : ""}
+  `;
 }
 
 async function promptReset(u) {
