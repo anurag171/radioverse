@@ -120,6 +120,10 @@
       <button id="player-fav" class="icon-btn" aria-label="Favorite" title="Add to favorites">
         <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 21s-7.5-4.6-9.7-8.7C.5 9.3 2 5.5 5.6 5.1 7.5 5 9 5.9 12 8.6 15 5.9 16.5 5 18.4 5.1c3.6.4 5.1 4.2 3.3 7.2C19.5 16.4 12 21 12 21z"/></svg>
       </button>
+      <button id="player-singalong" class="icon-btn player-singalong-btn" aria-label="Open sing-along recorder" title="Sing along" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 14a4 4 0 0 0 4-4V5a4 4 0 1 0-8 0v5a4 4 0 0 0 4 4zm6-4a6 6 0 0 1-12 0H4a8 8 0 0 0 7 7.93V21H7v2h10v-2h-4v-3.07A8 8 0 0 0 20 10h-2z"/></svg>
+        <span class="player-singalong-label">Sing-Along</span>
+      </button>
       <button id="player-close" class="icon-btn" aria-label="Close player" title="Close player">
         <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L12 13.4l-6.3 6.3-1.4-1.4L10.6 12 4.3 5.7l1.4-1.4L12 10.6l6.3-6.3z"/></svg>
       </button>
@@ -207,8 +211,58 @@
     </div>
   </div>
 
+  <div id="singalong-screen" class="singalong-screen" hidden>
+    <div class="singalong-card">
+      <div class="singalong-head">
+        <div>
+          <h2 class="singalong-title"><span class="singalong-icon" aria-hidden="true">&#127908;</span> Sing along</h2>
+          <p class="singalong-sub">The radio keeps playing &mdash; only <strong>your voice</strong> gets recorded.</p>
+        </div>
+        <button type="button" id="singalong-close" class="login-submit admin-close">Close</button>
+      </div>
+
+      <div class="singalong-now">
+        <span class="singalong-now-label">Now on air</span>
+        <span id="singalong-station" class="singalong-station">&#8230;</span>
+      </div>
+
+      <div class="singalong-visual">
+        <canvas id="singalong-wave" width="600" height="120" aria-hidden="true"></canvas>
+        <div id="singalong-wave-idle" class="singalong-wave-idle">Sing a few bars&#8230;</div>
+      </div>
+
+      <div class="singalong-timer" aria-live="polite">
+        <span id="singalong-status" class="singalong-status" role="status">Ready</span>
+        <span id="singalong-time" class="singalong-time">00:00</span>
+      </div>
+
+      <div class="singalong-controls">
+        <button id="singalong-start" class="singalong-btn rec" type="button">
+          <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="7" fill="currentColor"/></svg>
+          <span>Start recording</span>
+        </button>
+        <button id="singalong-stop" class="singalong-btn stop" type="button" disabled>
+          <svg viewBox="0 0 24 24" width="20" height="20"><rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor"/></svg>
+          <span>Stop</span>
+        </button>
+        <button id="singalong-play" class="singalong-btn ghost" type="button" disabled>
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
+          <span>Play recording</span>
+        </button>
+        <button id="singalong-save" class="singalong-btn ghost" type="button" disabled>
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 2h14v2H5v-2z" fill="currentColor"/></svg>
+          <span>Save recording</span>
+        </button>
+      </div>
+
+      <p id="singalong-msg" class="singalong-msg" role="alert" hidden></p>
+      <p class="singalong-note">Your recording is processed entirely on this device and never leaves your browser. A microphone permission prompt may appear the first time &mdash; allow it to sing along.</p>
+    </div>
+  </div>
+
   <script src="js/config.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/singalong.js"></script>
   <script src="js/auth.js" type="module"></script>
   <script src="js/admin.js" type="module"></script>
 
