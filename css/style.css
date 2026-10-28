@@ -1638,7 +1638,7 @@ main {
   height: calc(100vh - 64px);
   min-height: 420px;
   overflow: hidden;
-  background: #02050c;
+  background: #071018;
 }
 
 body.globe-mode .globe-view {

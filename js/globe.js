@@ -6,7 +6,7 @@
   const MAX_CAM_R = 430;
   const DEFAULT_CAM_R = 248;
   const CELL = 0.72;
-  const TEX_URL = "https://unpkg.com/three-globe@2.31.1/example/img/earth-dark.jpg";
+  const TEX_URL = "https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg";
 
   const $ = (id) => document.getElementById(id);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -178,7 +178,7 @@
   }
 
   function createAtmosphere() {
-    const geo = new THREE_NS.SphereGeometry(GLOBE_R * 1.08, 64, 48);
+    const geo = new THREE_NS.SphereGeometry(GLOBE_R * 1.045, 64, 48);
     const mat = new THREE_NS.ShaderMaterial({
       vertexShader: [
         "varying vec3 vNormal;",
@@ -190,8 +190,8 @@
       fragmentShader: [
         "varying vec3 vNormal;",
         "void main() {",
-        "  float i = pow(0.62 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.2);",
-        "  gl_FragColor = vec4(0.15, 0.55, 1.0, 1.0) * i;",
+        "  float i = pow(0.72 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 3.4);",
+        "  gl_FragColor = vec4(0.35, 0.62, 1.0, 1.0) * i * 0.55;",
         "}",
       ].join("\n"),
       blending: THREE_NS.AdditiveBlending,
@@ -204,11 +204,8 @@
 
   function createEarth() {
     const geo = new THREE_NS.SphereGeometry(GLOBE_R, 96, 72);
-    const mat = new THREE_NS.MeshPhongMaterial({
-      color: 0x152238,
-      emissive: 0x06101c,
-      specular: 0x1a3355,
-      shininess: 8,
+    const mat = new THREE_NS.MeshLambertMaterial({
+      color: 0x3a5a88,
     });
     earth = new THREE_NS.Mesh(geo, mat);
     scene.add(earth);
@@ -222,14 +219,12 @@
       tex.magFilter = THREE_NS.LinearFilter;
       tex.generateMipmaps = true;
       tex.needsUpdate = true;
-      earth.material = new THREE_NS.MeshPhongMaterial({
+      earth.material = new THREE_NS.MeshLambertMaterial({
         map: tex,
-        color: 0x8899b8,
-        emissive: 0x0a1524,
+        color: 0xffffff,
+        emissive: 0x1a2a44,
         emissiveMap: tex,
-        emissiveIntensity: 0.22,
-        specular: 0x223355,
-        shininess: 10,
+        emissiveIntensity: 0.55,
       });
     });
   }
@@ -808,11 +803,11 @@
   function initScene() {
     THREE_NS = window.THREE;
     scene = new THREE_NS.Scene();
-    scene.fog = new THREE_NS.FogExp2(0x02050c, 0.0011);
+    scene.fog = new THREE_NS.FogExp2(0x071018, 0.00055);
     camera = new THREE_NS.PerspectiveCamera(45, 1, 0.1, 3000);
     renderer = new THREE_NS.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2.5));
-    renderer.setClearColor(0x02050c, 1);
+    renderer.setClearColor(0x071018, 1);
     renderer.outputColorSpace = THREE_NS.SRGBColorSpace;
     els.stage.innerHTML = "";
     els.stage.appendChild(renderer.domElement);
@@ -821,10 +816,13 @@
     renderer.domElement.style.height = "100%";
     renderer.domElement.style.touchAction = "none";
 
-    scene.add(new THREE_NS.AmbientLight(0x6688aa, 0.85));
-    const sun = new THREE_NS.DirectionalLight(0xffffff, 1.15);
-    sun.position.set(-4, 2, 3);
+    scene.add(new THREE_NS.AmbientLight(0xc8d6ee, 1.35));
+    const sun = new THREE_NS.DirectionalLight(0xffffff, 1.55);
+    sun.position.set(2.2, 1.6, 3.4);
     scene.add(sun);
+    const fill = new THREE_NS.DirectionalLight(0x88aacc, 0.55);
+    fill.position.set(-3, -1, -2);
+    scene.add(fill);
 
     createStars();
     createEarth();
