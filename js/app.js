@@ -28,6 +28,7 @@ const state = {
   playing: null,
   metadataTimer: null,
   loading: false,
+  view: "globe",
 };
 
 /* ---------------- Utilities ---------------- */
@@ -386,7 +387,10 @@ function playStation(station) {
   });
 
   startMetadataWatch(station);
-  if (window.innerWidth < 768) {
+  if (window.RADIOVERSE_GLOBE && typeof window.RADIOVERSE_GLOBE.setPlaying === "function") {
+    window.RADIOVERSE_GLOBE.setPlaying(station);
+  }
+  if (state.view !== "globe" && window.innerWidth < 768) {
     bar.scrollIntoView({ behavior: "smooth", block: "end" });
   }
 }
@@ -400,6 +404,9 @@ function stopPlayer() {
   $("player-bar").hidden = true;
   $("player-bar").classList.remove("playing");
   document.querySelectorAll(".station-card").forEach((c) => c.classList.remove("playing"));
+  if (window.RADIOVERSE_GLOBE && typeof window.RADIOVERSE_GLOBE.setPlaying === "function") {
+    window.RADIOVERSE_GLOBE.setPlaying(null);
+  }
 }
 
 function updatePlayerFav() {
@@ -562,11 +569,51 @@ function debounce(fn, ms) {
   };
 }
 
+function setView(mode) {
+  state.view = mode === "list" ? "list" : "globe";
+  const globeOn = state.view === "globe";
+  document.body.classList.toggle("globe-mode", globeOn);
+  document.body.classList.toggle("list-mode", !globeOn);
+  const globeBtn = $("view-globe");
+  const listBtn = $("view-list");
+  if (globeBtn && listBtn) {
+    globeBtn.classList.toggle("active", globeOn);
+    listBtn.classList.toggle("active", !globeOn);
+    globeBtn.setAttribute("aria-selected", String(globeOn));
+    listBtn.setAttribute("aria-selected", String(!globeOn));
+  }
+  if (window.RADIOVERSE_GLOBE) {
+    if (typeof window.RADIOVERSE_GLOBE.setVisible === "function") {
+      window.RADIOVERSE_GLOBE.setVisible(globeOn);
+    }
+    if (globeOn && typeof window.RADIOVERSE_GLOBE.resize === "function") {
+      requestAnimationFrame(() => window.RADIOVERSE_GLOBE.resize());
+    }
+    if (!globeOn && typeof window.RADIOVERSE_GLOBE.hideSearch === "function") {
+      window.RADIOVERSE_GLOBE.hideSearch();
+    }
+  }
+}
+
 function bindEvents() {
   $("search-input").addEventListener("input", debounce((e) => {
     state.query = e.target.value.trim();
+    if (state.view === "globe" && window.RADIOVERSE_GLOBE && typeof window.RADIOVERSE_GLOBE.search === "function") {
+      window.RADIOVERSE_GLOBE.search(state.query);
+      return;
+    }
     loadStations({ reset: true });
-  }, 350));
+  }, 280));
+  $("search-input").addEventListener("focus", () => {
+    if (state.view === "globe" && window.RADIOVERSE_GLOBE && typeof window.RADIOVERSE_GLOBE.search === "function") {
+      window.RADIOVERSE_GLOBE.search(state.query);
+    }
+  });
+
+  const globeBtn = $("view-globe");
+  const listBtn = $("view-list");
+  if (globeBtn) globeBtn.addEventListener("click", () => setView("globe"));
+  if (listBtn) listBtn.addEventListener("click", () => setView("list"));
 
   $("country-select").addEventListener("change", (e) => {
     state.country = e.target.value;
@@ -602,7 +649,9 @@ function bindEvents() {
   });
 
   $("favorites-toggle").addEventListener("click", () => {
-    setFavoritesMode(!state.favoritesMode);
+    const next = !state.favoritesMode;
+    setFavoritesMode(next);
+    if (next) setView("list");
   });
 
   $("load-more").addEventListener("click", () => loadStations());
@@ -670,11 +719,15 @@ function setFavoritesMode(on) {
 function init() {
   initFavorites();
   bindEvents();
+  setView("globe");
   $("hero-count").textContent = "Thousands of live stations";
   pickApiBase().then((base) => {
     state.apiBase = base;
     loadFilters();
     loadStations({ reset: true });
+    if (window.RADIOVERSE_GLOBE && typeof window.RADIOVERSE_GLOBE.init === "function") {
+      window.RADIOVERSE_GLOBE.init(base);
+    }
   });
 }
 
@@ -686,4 +739,4 @@ function setDefaultCountry(name) {
   if (sel && sel.options.length) sel.value = DEFAULT_COUNTRY;
 }
 
-window.RADIOVERSE_APP = { init, stopPlayer, setDefaultCountry };
+window.RADIOVERSE_APP = { init, stopPlayer, setDefaultCountry, playStation, setView };

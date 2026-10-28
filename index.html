@@ -10,18 +10,22 @@
   <link rel="preconnect" href="https://de1.api.radio-browser.info">
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body class="globe-mode">
   <header class="topbar">
     <div class="brand">
       <span class="brand-logo" aria-hidden="true">&#128251;</span>
       <span class="brand-name">Radio<span>Verse</span></span>
       <span class="brand-tag">India &amp; World Radio</span>
     </div>
+    <div class="view-toggle" role="tablist" aria-label="View mode">
+      <button id="view-globe" class="view-btn active" type="button" role="tab" aria-selected="true">Globe</button>
+      <button id="view-list" class="view-btn" type="button" role="tab" aria-selected="false">List</button>
+    </div>
     <div class="search">
       <svg class="search-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
         <path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/>
       </svg>
-      <input id="search-input" type="search" placeholder="Search stations, e.g. Radio Mirchi" autocomplete="off" aria-label="Search stations">
+      <input id="search-input" type="search" placeholder="Search places or stations" autocomplete="off" aria-label="Search stations">
       <div id="account-chip" class="account" hidden>
         <span id="user-label" class="user-label"></span>
         <span id="premium-badge" class="premium-badge" title="Premium member" hidden>&#9733;</span>
@@ -36,6 +40,66 @@
     </div>
   </header>
 
+  <div id="globe-view" class="globe-view">
+    <div id="globe-stage" class="globe-stage" aria-label="Interactive radio globe"></div>
+    <div class="globe-vignette" aria-hidden="true"></div>
+
+    <div class="globe-tune" id="globe-tune">
+      <div class="globe-crosshair" aria-hidden="true">
+        <svg viewBox="0 0 80 80" width="72" height="72">
+          <circle cx="40" cy="40" r="28" fill="none" stroke="currentColor" stroke-width="1.4"/>
+          <polygon points="32,26 32,54 56,40" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        </svg>
+      </div>
+      <button id="globe-play" class="globe-play" type="button" title="Play live radio here" aria-label="Play live radio at this place">
+        <svg viewBox="0 0 24 24" width="28" height="28"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
+      </button>
+      <div class="globe-tune-meta">
+        <span id="globe-place-name" class="globe-place-name">Spin the globe</span>
+        <span id="globe-place-sub" class="globe-place-sub">Explore live radio worldwide</span>
+      </div>
+    </div>
+
+    <div class="globe-hud">
+      <button id="globe-zoom-in" class="hud-btn" type="button" title="Zoom in" aria-label="Zoom in">+</button>
+      <button id="globe-zoom-out" class="hud-btn" type="button" title="Zoom out" aria-label="Zoom out">&minus;</button>
+      <button id="globe-spin" class="hud-btn" type="button" title="Auto-rotate" aria-label="Toggle auto-rotate" aria-pressed="true">
+        <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 6V3L8 7l4 4V8c2.76 0 5 2.24 5 5a5 5 0 0 1-8.9 3.1L6.7 17.5A7 7 0 0 0 19 13c0-3.87-3.13-7-7-7z"/></svg>
+      </button>
+      <button id="globe-locate" class="hud-btn" type="button" title="My location" aria-label="Go to my location">
+        <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm8.94 3A8.99 8.99 0 0 0 13 3.06V1h-2v2.06A8.99 8.99 0 0 0 3.06 11H1v2h2.06A8.99 8.99 0 0 0 11 20.94V23h2v-2.06A8.99 8.99 0 0 0 20.94 13H23v-2h-2.06zM12 19a7 7 0 1 1 0-14 7 7 0 0 1 0 14z"/></svg>
+      </button>
+      <button id="globe-shuffle" class="hud-btn" type="button" title="Random place" aria-label="Jump to a random place">
+        <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M10.6 9.4 9.2 8 5 12.2 9.2 16.4l1.4-1.4-1.8-1.8h2.7c.9 0 1.7.4 2.2 1.1l1.6-1.6A4.5 4.5 0 0 0 11.5 9.4h-2.7l1.8-1.8zM19 7h-3l1.8 1.8-1.4 1.4L19 7zm0 10-2.6-3.2 1.4-1.4L21 16.2 16.8 20.4l-1.4-1.4L19 17z"/></svg>
+      </button>
+    </div>
+
+    <p class="globe-hint" id="globe-hint">Drag to explore live radio &middot; click a glow to tune in</p>
+    <div id="globe-status" class="globe-status">Mapping live stations&hellip;</div>
+
+    <div id="globe-search-panel" class="globe-search-panel" hidden>
+      <div class="globe-search-head">
+        <h2>Search the globe</h2>
+        <button id="globe-search-close" class="hud-btn" type="button" aria-label="Close search">&times;</button>
+      </div>
+      <div id="globe-search-results" class="globe-search-results">
+        <p class="globe-search-empty">Type a city, country or station name.</p>
+      </div>
+    </div>
+
+    <aside id="globe-place-panel" class="globe-place-panel" hidden>
+      <div class="globe-place-head">
+        <div>
+          <h2 id="globe-panel-title">Place</h2>
+          <p id="globe-panel-sub" class="globe-panel-sub"></p>
+        </div>
+        <button id="globe-place-close" class="hud-btn" type="button" aria-label="Close place">&times;</button>
+      </div>
+      <div id="globe-place-list" class="globe-place-list"></div>
+    </aside>
+  </div>
+
+  <div id="list-view" class="list-view">
   <section class="hero">
     <div class="hero-inner">
       <h1>Live radio, <span class="grad">streamed worldwide</span></h1>
@@ -91,6 +155,7 @@
     </div>
     <button id="load-more" class="load-more" hidden>Load more stations</button>
   </main>
+  </div>
 
   <footer class="footer">
     <p>RadioVerse &middot; streams powered by the <a href="https://www.radio-browser.info" target="_blank" rel="noopener">Radio Browser</a> community directory</p>
@@ -260,8 +325,10 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script src="js/config.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/globe.js"></script>
   <script src="js/singalong.js"></script>
   <script src="js/auth.js" type="module"></script>
   <script src="js/admin.js" type="module"></script>
