@@ -5,8 +5,8 @@
   const MIN_CAM_R = 145;
   const MAX_CAM_R = 430;
   const DEFAULT_CAM_R = 248;
-  const CELL = 0.55;
-  const TEX_URL = "https://unpkg.com/three-globe@2.31.1/example/img/earth-night.jpg";
+  const CELL = 0.72;
+  const TEX_URL = "https://unpkg.com/three-globe@2.31.1/example/img/earth-dark.jpg";
 
   const $ = (id) => document.getElementById(id);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -121,19 +121,28 @@
   }
 
   function glowTexture() {
+    const size = 128;
     const c = document.createElement("canvas");
-    c.width = 64;
-    c.height = 64;
+    c.width = size;
+    c.height = size;
     const g = c.getContext("2d");
-    const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    const mid = size * 0.5;
+    const grd = g.createRadialGradient(mid, mid, 0, mid, mid, mid);
     grd.addColorStop(0, "rgba(255,255,255,1)");
-    grd.addColorStop(0.22, "rgba(180,255,230,0.9)");
-    grd.addColorStop(0.45, "rgba(0,229,255,0.35)");
+    grd.addColorStop(0.08, "rgba(235,255,250,1)");
+    grd.addColorStop(0.16, "rgba(120,255,220,0.95)");
+    grd.addColorStop(0.28, "rgba(0,229,255,0.45)");
+    grd.addColorStop(0.42, "rgba(0,180,255,0.12)");
+    grd.addColorStop(0.62, "rgba(0,120,255,0.03)");
     grd.addColorStop(1, "rgba(0,0,0,0)");
     g.fillStyle = grd;
-    g.fillRect(0, 0, 64, 64);
+    g.fillRect(0, 0, size, size);
     const tex = new THREE_NS.CanvasTexture(c);
     tex.colorSpace = THREE_NS.SRGBColorSpace;
+    tex.minFilter = THREE_NS.LinearFilter;
+    tex.magFilter = THREE_NS.LinearFilter;
+    tex.generateMipmaps = false;
+    tex.needsUpdate = true;
     return tex;
   }
 
@@ -194,12 +203,12 @@
   }
 
   function createEarth() {
-    const geo = new THREE_NS.SphereGeometry(GLOBE_R, 80, 60);
+    const geo = new THREE_NS.SphereGeometry(GLOBE_R, 96, 72);
     const mat = new THREE_NS.MeshPhongMaterial({
-      color: 0x0c1b3a,
-      emissive: 0x04101f,
-      specular: 0x1a3a66,
-      shininess: 12,
+      color: 0x152238,
+      emissive: 0x06101c,
+      specular: 0x1a3355,
+      shininess: 8,
     });
     earth = new THREE_NS.Mesh(geo, mat);
     scene.add(earth);
@@ -208,7 +217,20 @@
     loader.setCrossOrigin("anonymous");
     loader.load(TEX_URL, (tex) => {
       tex.colorSpace = THREE_NS.SRGBColorSpace;
-      earth.material = new THREE_NS.MeshBasicMaterial({ map: tex, color: 0xc8d4e8 });
+      tex.anisotropy = renderer ? renderer.capabilities.getMaxAnisotropy() : 8;
+      tex.minFilter = THREE_NS.LinearMipmapLinearFilter;
+      tex.magFilter = THREE_NS.LinearFilter;
+      tex.generateMipmaps = true;
+      tex.needsUpdate = true;
+      earth.material = new THREE_NS.MeshPhongMaterial({
+        map: tex,
+        color: 0x8899b8,
+        emissive: 0x0a1524,
+        emissiveMap: tex,
+        emissiveIntensity: 0.22,
+        specular: 0x223355,
+        shininess: 10,
+      });
     });
   }
 
@@ -318,11 +340,11 @@
 
     for (let i = 0; i < n; i++) {
       const c = clusters[i];
-      const v = latLngToVec3(c.lat, c.lng, GLOBE_R + 0.6);
+      const v = latLngToVec3(c.lat, c.lng, GLOBE_R + 0.35);
       pos[i * 3] = v.x;
       pos[i * 3 + 1] = v.y;
       pos[i * 3 + 2] = v.z;
-      const t = clamp(Math.log2(c.count + 1) / 6, 0, 1);
+      const t = clamp(Math.log2(c.count + 1) / 7, 0, 1);
       const color = cyan.clone().lerp(green, t);
       if (playingUuid && c.stations.some((s) => s.stationuuid === playingUuid)) {
         color.copy(mag);
@@ -330,7 +352,7 @@
       col[i * 3] = color.r;
       col[i * 3 + 1] = color.g;
       col[i * 3 + 2] = color.b;
-      size[i] = 4.2 + Math.min(14, Math.sqrt(c.count) * 1.6);
+      size[i] = 2.1 + Math.min(5.8, Math.log2(c.count + 1) * 1.15);
     }
 
     const geo = new THREE_NS.BufferGeometry();
@@ -341,7 +363,7 @@
     const mat = new THREE_NS.ShaderMaterial({
       uniforms: {
         uMap: { value: glowTexture() },
-        uScale: { value: 2.4 },
+        uScale: { value: 1.15 },
       },
       vertexShader: [
         "attribute float aSize;",
@@ -351,7 +373,7 @@
         "void main() {",
         "  vColor = aColor;",
         "  vec4 mv = modelViewMatrix * vec4(position, 1.0);",
-        "  gl_PointSize = aSize * uScale * (220.0 / -mv.z);",
+        "  gl_PointSize = min(18.0, aSize * uScale * (175.0 / -mv.z));",
         "  gl_Position = projectionMatrix * mv;",
         "}",
       ].join("\n"),
@@ -360,8 +382,10 @@
         "varying vec3 vColor;",
         "void main() {",
         "  vec4 t = texture2D(uMap, gl_PointCoord);",
-        "  if (t.a < 0.06) discard;",
-        "  gl_FragColor = vec4(vColor, t.a);",
+        "  float a = pow(t.a, 1.35);",
+        "  if (a < 0.05) discard;",
+        "  vec3 rgb = vColor * (0.55 + 0.45 * a);",
+        "  gl_FragColor = vec4(rgb, a);",
         "}",
       ].join("\n"),
       transparent: true,
@@ -784,10 +808,10 @@
   function initScene() {
     THREE_NS = window.THREE;
     scene = new THREE_NS.Scene();
-    scene.fog = new THREE_NS.FogExp2(0x02050c, 0.0018);
+    scene.fog = new THREE_NS.FogExp2(0x02050c, 0.0011);
     camera = new THREE_NS.PerspectiveCamera(45, 1, 0.1, 3000);
     renderer = new THREE_NS.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2.5));
     renderer.setClearColor(0x02050c, 1);
     renderer.outputColorSpace = THREE_NS.SRGBColorSpace;
     els.stage.innerHTML = "";
