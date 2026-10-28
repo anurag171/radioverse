@@ -6,7 +6,14 @@
   const MAX_CAM_R = 430;
   const DEFAULT_CAM_R = 248;
   const CELL = 0.72;
-  const TEX_URL = "https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg";
+  const TEX_URLS = [
+    "https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/earth-blue-marble.jpg",
+    "https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg",
+  ];
+  const BORDER_URLS = [
+    "https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@v5.1.2/geojson/ne_110m_admin_0_countries.geojson",
+    "https://cdn.jsdelivr.net/gh/johan/world.geo.json@master/countries.geo.json",
+  ];
 
   const $ = (id) => document.getElementById(id);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -202,31 +209,160 @@
     scene.add(new THREE_NS.Mesh(geo, mat));
   }
 
+  function loadTexture(url) {
+    return new Promise((resolve, reject) => {
+      const loader = new THREE_NS.TextureLoader();
+      loader.setCrossOrigin("anonymous");
+      loader.load(url, resolve, undefined, reject);
+    });
+  }
+
+  async function fetchJson(urls) {
+    for (const url of urls) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        return await res.json();
+      } catch (err) {
+        /* try next */
+      }
+    }
+    return null;
+  }
+
+  function eachPolygon(feature, visit) {
+    const geom = feature && feature.geometry;
+    if (!geom) return;
+    if (geom.type === "Polygon") visit(geom.coordinates);
+    else if (geom.type === "MultiPolygon") geom.coordinates.forEach(visit);
+  }
+
+  function lngLatToCanvas(lng, lat, w, h) {
+    return [(lng + 180) / 360 * w, (90 - lat) / 180 * h];
+  }
+
+  function paintPoliticalMap(geojson) {
+    const w = 2048;
+    const h = 1024;
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#1a4a86";
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = "#3f7a4e";
+    ctx.strokeStyle = "#e7f1ff";
+    ctx.lineWidth = 1.35;
+    ctx.lineJoin = "round";
+
+    function drawRings(rings, fill) {
+      if (!rings || !rings.length) return;
+      ctx.beginPath();
+      for (const ring of rings) {
+        if (!ring || ring.length < 2) continue;
+        let prevX = null;
+        for (let i = 0; i < ring.length; i++) {
+          const [lng, lat] = ring[i];
+          const [x, y] = lngLatToCanvas(lng, lat, w, h);
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else if (prevX != null && Math.abs(x - prevX) > w * 0.5) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+          prevX = x;
+        }
+        ctx.closePath();
+      }
+      if (fill) ctx.fill();
+      ctx.stroke();
+    }
+
+    const features = geojson.features || geojson.geometries || [];
+    for (const feature of features) {
+      eachPolygon(feature, (rings) => drawRings(rings, true));
+    }
+
+    const tex = new THREE_NS.CanvasTexture(canvas);
+    tex.colorSpace = THREE_NS.SRGBColorSpace;
+    tex.anisotropy = renderer ? renderer.capabilities.getMaxAnisotropy() : 8;
+    tex.minFilter = THREE_NS.LinearMipmapLinearFilter;
+    tex.magFilter = THREE_NS.LinearFilter;
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  function addCountryLines(geojson) {
+    const positions = [];
+    function addRing(ring) {
+      if (!ring || ring.length < 2) return;
+      for (let i = 0; i < ring.length - 1; i++) {
+        const a = ring[i];
+        const b = ring[i + 1];
+        if (Math.abs(a[0] - b[0]) > 180) continue;
+        const va = latLngToVec3(a[1], a[0], GLOBE_R + 0.18);
+        const vb = latLngToVec3(b[1], b[0], GLOBE_R + 0.18);
+        positions.push(va.x, va.y, va.z, vb.x, vb.y, vb.z);
+      }
+    }
+    const features = geojson.features || [];
+    for (const feature of features) {
+      eachPolygon(feature, (rings) => rings.forEach(addRing));
+    }
+    if (!positions.length) return;
+    const geo = new THREE_NS.BufferGeometry();
+    geo.setAttribute("position", new THREE_NS.Float32BufferAttribute(positions, 3));
+    const lines = new THREE_NS.LineSegments(
+      geo,
+      new THREE_NS.LineBasicMaterial({
+        color: 0xe8f2ff,
+        transparent: true,
+        opacity: 0.72,
+        depthTest: true,
+      })
+    );
+    scene.add(lines);
+  }
+
+  function applyEarthTexture(tex) {
+    tex.colorSpace = THREE_NS.SRGBColorSpace;
+    tex.anisotropy = renderer ? renderer.capabilities.getMaxAnisotropy() : 8;
+    tex.minFilter = THREE_NS.LinearMipmapLinearFilter;
+    tex.magFilter = THREE_NS.LinearFilter;
+    tex.generateMipmaps = true;
+    tex.needsUpdate = true;
+    earth.material = new THREE_NS.MeshBasicMaterial({
+      map: tex,
+      color: 0xffffff,
+    });
+  }
+
   function createEarth() {
     const geo = new THREE_NS.SphereGeometry(GLOBE_R, 96, 72);
-    const mat = new THREE_NS.MeshLambertMaterial({
-      color: 0x3a5a88,
-    });
-    earth = new THREE_NS.Mesh(geo, mat);
+    earth = new THREE_NS.Mesh(
+      geo,
+      new THREE_NS.MeshBasicMaterial({ color: 0x1a4a86 })
+    );
     scene.add(earth);
 
-    const loader = new THREE_NS.TextureLoader();
-    loader.setCrossOrigin("anonymous");
-    loader.load(TEX_URL, (tex) => {
-      tex.colorSpace = THREE_NS.SRGBColorSpace;
-      tex.anisotropy = renderer ? renderer.capabilities.getMaxAnisotropy() : 8;
-      tex.minFilter = THREE_NS.LinearMipmapLinearFilter;
-      tex.magFilter = THREE_NS.LinearFilter;
-      tex.generateMipmaps = true;
-      tex.needsUpdate = true;
-      earth.material = new THREE_NS.MeshLambertMaterial({
-        map: tex,
-        color: 0xffffff,
-        emissive: 0x1a2a44,
-        emissiveMap: tex,
-        emissiveIntensity: 0.55,
-      });
-    });
+    (async () => {
+      const geojson = await fetchJson(BORDER_URLS);
+      if (geojson) {
+        applyEarthTexture(paintPoliticalMap(geojson));
+        addCountryLines(geojson);
+        return;
+      }
+      for (const url of TEX_URLS) {
+        try {
+          const tex = await loadTexture(url);
+          applyEarthTexture(tex);
+          return;
+        } catch (err) {
+          /* try next */
+        }
+      }
+    })();
   }
 
   function createMarker() {
