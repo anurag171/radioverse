@@ -136,11 +136,10 @@
     const mid = size * 0.5;
     const grd = g.createRadialGradient(mid, mid, 0, mid, mid, mid);
     grd.addColorStop(0, "rgba(255,255,255,1)");
-    grd.addColorStop(0.08, "rgba(235,255,250,1)");
-    grd.addColorStop(0.16, "rgba(120,255,220,0.95)");
-    grd.addColorStop(0.28, "rgba(0,229,255,0.45)");
-    grd.addColorStop(0.42, "rgba(0,180,255,0.12)");
-    grd.addColorStop(0.62, "rgba(0,120,255,0.03)");
+    grd.addColorStop(0.1, "rgba(255,255,255,1)");
+    grd.addColorStop(0.22, "rgba(170,255,235,1)");
+    grd.addColorStop(0.4, "rgba(0,255,210,0.7)");
+    grd.addColorStop(0.62, "rgba(0,229,255,0.22)");
     grd.addColorStop(1, "rgba(0,0,0,0)");
     g.fillStyle = grd;
     g.fillRect(0, 0, size, size);
@@ -316,9 +315,9 @@
     const lines = new THREE_NS.LineSegments(
       geo,
       new THREE_NS.LineBasicMaterial({
-        color: 0xe8f2ff,
+        color: 0xd7e8ff,
         transparent: true,
-        opacity: 0.72,
+        opacity: 0.38,
         depthTest: true,
       })
     );
@@ -347,21 +346,22 @@
     scene.add(earth);
 
     (async () => {
-      const geojson = await fetchJson(BORDER_URLS);
-      if (geojson) {
-        applyEarthTexture(paintPoliticalMap(geojson));
-        addCountryLines(geojson);
-        return;
-      }
+      let satellite = null;
       for (const url of TEX_URLS) {
         try {
-          const tex = await loadTexture(url);
-          applyEarthTexture(tex);
-          return;
+          satellite = await loadTexture(url);
+          break;
         } catch (err) {
           /* try next */
         }
       }
+      const geojson = await fetchJson(BORDER_URLS);
+      if (satellite) {
+        applyEarthTexture(satellite);
+      } else if (geojson) {
+        applyEarthTexture(paintPoliticalMap(geojson));
+      }
+      if (geojson) addCountryLines(geojson);
     })();
   }
 
@@ -477,13 +477,14 @@
       pos[i * 3 + 2] = v.z;
       const t = clamp(Math.log2(c.count + 1) / 7, 0, 1);
       const color = cyan.clone().lerp(green, t);
+      color.multiplyScalar(1.35);
       if (playingUuid && c.stations.some((s) => s.stationuuid === playingUuid)) {
         color.copy(mag);
       }
       col[i * 3] = color.r;
       col[i * 3 + 1] = color.g;
       col[i * 3 + 2] = color.b;
-      size[i] = 2.1 + Math.min(5.8, Math.log2(c.count + 1) * 1.15);
+      size[i] = 2.8 + Math.min(7.2, Math.log2(c.count + 1) * 1.35);
     }
 
     const geo = new THREE_NS.BufferGeometry();
@@ -494,7 +495,7 @@
     const mat = new THREE_NS.ShaderMaterial({
       uniforms: {
         uMap: { value: glowTexture() },
-        uScale: { value: 1.15 },
+        uScale: { value: 1.45 },
       },
       vertexShader: [
         "attribute float aSize;",
@@ -504,7 +505,7 @@
         "void main() {",
         "  vColor = aColor;",
         "  vec4 mv = modelViewMatrix * vec4(position, 1.0);",
-        "  gl_PointSize = min(18.0, aSize * uScale * (175.0 / -mv.z));",
+        "  gl_PointSize = min(22.0, aSize * uScale * (185.0 / -mv.z));",
         "  gl_Position = projectionMatrix * mv;",
         "}",
       ].join("\n"),
@@ -513,10 +514,10 @@
         "varying vec3 vColor;",
         "void main() {",
         "  vec4 t = texture2D(uMap, gl_PointCoord);",
-        "  float a = pow(t.a, 1.35);",
-        "  if (a < 0.05) discard;",
-        "  vec3 rgb = vColor * (0.55 + 0.45 * a);",
-        "  gl_FragColor = vec4(rgb, a);",
+        "  float a = pow(t.a, 1.05);",
+        "  if (a < 0.04) discard;",
+        "  vec3 rgb = vColor * (0.85 + 0.55 * a);",
+        "  gl_FragColor = vec4(rgb, min(1.0, a * 1.25));",
         "}",
       ].join("\n"),
       transparent: true,
